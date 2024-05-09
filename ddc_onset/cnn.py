@@ -68,8 +68,7 @@ class SpectrogramNormalizer(nn.Module):
         if is_train:
             self.train()
 
-_FEATURE_CONTEXT_RADIUS_1 = 7
-_FEATURE_CONTEXT_RADIUS_2 = 3
+
 
 
 class PlacementCNN(nn.Module):
@@ -77,6 +76,9 @@ class PlacementCNN(nn.Module):
 
     def __init__(self, load_pretrained_weights: bool = True):
         super().__init__()
+        self._FEATURE_CONTEXT_RADIUS_1 = 7
+        self._FEATURE_CONTEXT_RADIUS_2_1 = 3
+        self._DIFFICULTY_LEN = len(Difficulty)
         self.conv0 = nn.Conv2d(3, 10, (7, 3))
         self.maxpool0 = nn.MaxPool2d((1, 3), (1, 3))
         self.conv1 = nn.Conv2d(10, 20, (3, 3))
@@ -89,6 +91,7 @@ class PlacementCNN(nn.Module):
                 torch.load(pathlib.Path(WEIGHTS_DIR, "placement_cnn_ckpt_56000.bin"))
             )
 
+    @torch.jit.export
     def conv(self, x: torch.Tensor):
         # x is b, 3, 15, 80
 
@@ -104,6 +107,7 @@ class PlacementCNN(nn.Module):
 
         return x
 
+    @torch.jit.export
     def dense(self, x_conv_diff: torch.Tensor):
         # x is b, 1125
 
@@ -121,6 +125,7 @@ class PlacementCNN(nn.Module):
 
         return x
 
+    @torch.jit.export
     def forward(
         self,
         x: torch.Tensor,
@@ -147,24 +152,27 @@ class PlacementCNN(nn.Module):
 
         # Pad features
         x_padded = F.pad(
-            x, (0, 0, 0, 0, _FEATURE_CONTEXT_RADIUS_1, _FEATURE_CONTEXT_RADIUS_1)
+            x, (0, 0, 0, 0, self._FEATURE_CONTEXT_RADIUS_1, self._FEATURE_CONTEXT_RADIUS_1)
         )
+
+        x_chunk_conv = torch.zeros((1))
 
         # Convolve
         x_padded = x_padded.permute(2, 0, 1)
         x_conv = []
         for i in range(0, num_timesteps, conv_chunk_size):
             x_chunk = x_padded[
-                :, i : i + conv_chunk_size + _FEATURE_CONTEXT_RADIUS_1 * 2
+                :, i : i + conv_chunk_size + self._FEATURE_CONTEXT_RADIUS_1 * 2
             ].unsqueeze(0)
             x_chunk_conv = self.conv(x_chunk)
-            assert x_chunk_conv.shape[1] > _FEATURE_CONTEXT_RADIUS_2 * 2
+            assert x_chunk_conv.shape[1] > self._FEATURE_CONTEXT_RADIUS_2_1 * 2
             if i == 0:
-                x_conv.append(x_chunk_conv[:, :, :_FEATURE_CONTEXT_RADIUS_2])
+                x_conv.append(x_chunk_conv[:, :, :self._FEATURE_CONTEXT_RADIUS_2_1])
             x_conv.append(
-                x_chunk_conv[:, :, _FEATURE_CONTEXT_RADIUS_2:-_FEATURE_CONTEXT_RADIUS_2]
+                x_chunk_conv[:, :, self._FEATURE_CONTEXT_RADIUS_2_1:-self._FEATURE_CONTEXT_RADIUS_2_1]
             )
-        x_conv.append(x_chunk_conv[:, :, -_FEATURE_CONTEXT_RADIUS_2:])
+
+        x_conv.append(x_chunk_conv[:, :, -self._FEATURE_CONTEXT_RADIUS_2_1:])
         x_conv = torch.cat(x_conv, dim=2)
         x_conv = x_conv.permute(0, 2, 3, 1)
         x_conv = x_conv.reshape(-1, 160)
@@ -179,7 +187,7 @@ class PlacementCNN(nn.Module):
             for j in range(i, i + dense_chunk_size):
                 if j >= num_timesteps:
                     break
-                x_chunk.append(x_conv[j : j + 1 + _FEATURE_CONTEXT_RADIUS_2 * 2])
+                x_chunk.append(x_conv[j : j + 1 + self._FEATURE_CONTEXT_RADIUS_2_1 * 2])
             x_chunk = torch.stack(x_chunk, dim=0)
             x_chunk = x_chunk.reshape(-1, 1120)
 
@@ -187,7 +195,7 @@ class PlacementCNN(nn.Module):
             logits_diffs = []
             for k in range(difficulties.shape[0]):
                 d = difficulties[k].repeat(x_chunk.shape[0])
-                doh = F.one_hot(d, len(Difficulty)).float()
+                doh = F.one_hot(d, self._DIFFICULTY_LEN).float()
                 x_chunk_diff = torch.cat([x_chunk, doh], dim=1)
                 x_chunk_dense = self.dense(x_chunk_diff)
                 logits_diffs.append(x_chunk_dense)
@@ -199,3 +207,22 @@ class PlacementCNN(nn.Module):
             return logits
         else:
             return torch.sigmoid(logits)
+
+    @torch.jit.ignore
+    def serialize(self, save_folder, filename=None):
+
+        os.makedirs(save_folder, exist_ok=True)
+
+        if filename is None:
+            filename = f'placement_cnn.pt'
+        is_train = self.training
+        self.eval()
+        save_path = os.path.join(save_folder, filename)
+
+        scr = torch.jit.script(self)
+        # save model
+        with open(save_path, "wb") as f:
+            torch.jit.save(scr, f)
+
+        if is_train:
+            self.train()
