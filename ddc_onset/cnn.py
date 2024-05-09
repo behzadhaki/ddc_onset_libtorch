@@ -1,4 +1,5 @@
 import pathlib
+import os
 
 import torch
 import torch.nn as nn
@@ -37,6 +38,7 @@ class SpectrogramNormalizer(nn.Module):
                 torch.load(pathlib.Path(WEIGHTS_DIR, "spectrogram_normalizer.bin"))
             )
 
+    @torch.jit.export
     def forward(self, x: torch.Tensor):
         """Normalizes log-Mel spectrograms to zero mean and unit variance per bin.
 
@@ -47,6 +49,24 @@ class SpectrogramNormalizer(nn.Module):
         """
         return (x - self.mean) / self.std
 
+    @torch.jit.ignore
+    def serialize(self, save_folder, filename=None):
+
+        os.makedirs(save_folder, exist_ok=True)
+
+        if filename is None:
+            filename = f'SpectrogramNormalizer.pt'
+        is_train = self.training
+        self.eval()
+        save_path = os.path.join(save_folder, filename)
+
+        scr = torch.jit.script(self)
+        # save model
+        with open(save_path, "wb") as f:
+            torch.jit.save(scr, f)
+
+        if is_train:
+            self.train()
 
 _FEATURE_CONTEXT_RADIUS_1 = 7
 _FEATURE_CONTEXT_RADIUS_2 = 3
