@@ -74,9 +74,10 @@ def find_peaks(onset_salience: np.ndarray):
         raise Exception(
             "Scipy required for finding peaks. Please install scipy with `pip install scipy`."
         )
-    onset_salience_smoothed = np.convolve(onset_salience, np.hamming(5), "same")
+    onset_salience_smoothed = np.convolve(onset_salience, np.hamming(1), "same")
     peaks = argrelextrema(onset_salience_smoothed, np.greater_equal, order=1)[0]
     return peaks
+
 
 
 def threshold_peaks(onset_salience: np.ndarray, peaks: np.ndarray, threshold: float):

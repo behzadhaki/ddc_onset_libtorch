@@ -22,6 +22,7 @@ class SpectrogramExtractor(nn.Module):
         super().__init__()
 
         self._FEATS_HOP = SAMPLE_RATE // FRAME_RATE
+        print("Hop size: ", self._FEATS_HOP, "Sample Rate: ", SAMPLE_RATE, "Frame Rate: ", FRAME_RATE)
         self._LOG_EPS = 1e-16
 
         for i in _FFT_FRAME_LENGTHS:
@@ -79,9 +80,6 @@ class SpectrogramExtractor(nn.Module):
             fft_frame_length_half = fft_frame_length // 2
             waveform_padded = F.pad(waveform, (0, 0, fft_frame_length_half, 0))
             waveform_padded_len = waveform_padded.shape[0]
-
-
-
 
             # Chunk up waveform to save memory at cost of some efficiency
             if frame_chunk_size is None:
