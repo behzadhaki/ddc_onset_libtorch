@@ -1,8 +1,12 @@
 # Note 
 
-This is a slightly modified DDC model developed by Chris Donahue et. al. 
+This is a slightly modified implementation of the DDC model developed by Chris Donahue et. al.
 
-If you use the original or serialized models, please make sure to cite the authors as noted at the bottom of this page.
+The implementation here is intended to allow exporting model using [TorchScript](https://pytorch.org/docs/stable/jit.html). 
+
+If you intend to train the model, you should be using the source code in the [original repo](https://github.com/chrisdonahue/ddc_onset). Once trained, the model can be serialized using the self-explanatory notebook available in this repo. 
+
+If you use the original or serialized models, please make sure to cite the original authors (i.e. Donahue et. al.) as noted at the bottom of this page.
 
 The following content comes from the [original repo](https://github.com/chrisdonahue/ddc_onset)
 
