@@ -1,3 +1,13 @@
+# Note 
+
+This is a slightly modified DDC model developed by Chris Donahue et. al. 
+
+If you use the original or serialized models, please make sure to cite the authors as noted at the bottom of this page.
+
+The following content comes from the [original repo](https://github.com/chrisdonahue/ddc_onset)
+
+
+---------------------------------------------------------------
 # Music onset detector from Dance Dance Convolution
 
 This is a simple CPU- and GPU-compatible PyTorch port of the lightweight CNN-based music onset detector model from [Dance Dance Convolution](https://arxiv.org/abs/1703.06891), originally referred to in that work as the "step placement" model.
