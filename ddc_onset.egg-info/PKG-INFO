@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: ddc-onset
+Version: 0.1
+Summary: Onset detector from Dance Dance Convolution in PyTorch
+Home-page: https://github.com/chrisdonahue/ddc_onset
+Author: Chris Donahue
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: torch>=1.9.0
